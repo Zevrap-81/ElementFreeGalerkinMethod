@@ -105,8 +105,7 @@ class EFGM_Method:
         for quad in self.params.quadrature.gauss_internal.reshape(-1, *size[2:]):
             g_point = get_gauss(quad, self.params)
             phi, dphidx, dphidy= shape(g_point, self.params)
-            print(sum(phi))
-            # assert pytest.approx(sum(phi), 100*np.finfo(np.float64).eps) == 1
+            assert pytest.approx(sum(phi), 100*np.finfo(np.float64).eps) == 1
             # assert pytest.approx(sum(phi), 10**(-3)) == 1
             
             Bmat = np.zeros((3, 2*g_point.len))
@@ -118,7 +117,7 @@ class EFGM_Method:
             ids= self.get_indices_voigt(g_point)
             id_x, id_y = np.meshgrid(ids, ids)
 
-            K = g_point.weight * Bmat.T @ self.params.material.Dmat @ Bmat
+            K = g_point.weight * np.matmul(Bmat.T, np.matmul(self.params.material.Dmat,Bmat))
             self.params.descrete_equations.K_stiff[id_x, id_y] += g_point.jac_det * K.T
 
         #Get the G matrix (lagrange multiplier approach)
@@ -197,7 +196,6 @@ class EFGM_Method:
         b= np.hstack((self.params.descrete_equations.G.T, np.zeros((size[1], size[1]))))
 
         K = np.vstack((a,b))
-
         u = np.linalg.solve(K,f)
 
         print(u)

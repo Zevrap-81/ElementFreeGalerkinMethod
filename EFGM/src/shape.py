@@ -1,7 +1,7 @@
 import numpy as np
 import scipy
 # SciPy Linear Algebra Library
-from scipy.linalg import lu, solve_triangular
+from scipy.linalg.decomp_lu import lu_factor, lu_solve
 
 from EFGM.common.parameters import Parameters
 from EFGM.src.gauss import GaussPoint
@@ -37,20 +37,19 @@ def shape(g_point:GaussPoint, params: Parameters):
 
     pg = np.insert(g_point.coord, 0, 1)
 
-    P, L, U = lu(A)
+    plu = lu_factor(A)
     
     for i in range(3):             # 0 for phi, 1 for dphi/dx and 2 for dphi/dy
         if i == 0:
-            C = P.dot(pg)
-            gam[i] = solve_triangular(U,solve_triangular(L,C, lower=True))
+            gam[i] = lu_solve(plu, pg)
 
         elif i == 1:
-            C = P.dot(np.array([0, 1, 0])-dAdx.dot(gam[0]))
-            gam[i] = solve_triangular(U, solve_triangular(L, C, lower=True))
+            c = np.array([0, 1, 0])-dAdx.dot(gam[0])
+            gam[i] = lu_solve(plu, c)
 
         elif i == 2:
-            C = P.dot(np.array([0, 0, 1])-dAdy.dot(gam[0]))
-            gam[i] = solve_triangular(U, solve_triangular(L, C, lower=True))
+            c = np.array([0, 0, 1])-dAdy.dot(gam[0])
+            gam[i] = lu_solve(plu, c)
 
     phi = np.dot(gam[0], B)
     dphix = np.dot(gam[1], B) + np.dot(gam[0], dBdx)
