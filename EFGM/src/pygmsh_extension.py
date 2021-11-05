@@ -87,7 +87,6 @@ class MyGeometry(Geometry):
             points= points[:,0]
         elif geometry_type=='2D':
             points= points[:,0:2]
-
         gauss_quad = np.hstack((points, weights, dets))
         return gauss_quad.reshape(num_elems, -1, *gauss_quad.shape[1:])
     
@@ -100,9 +99,10 @@ class MyGeometry(Geometry):
 
         node_tags= []
         for tag in tags:    
-            t, _, nodes= gmsh.model.mesh.getElements(1, tag)
-            idx= np.where(t==element_type)[0].item()
-            node_tags+= nodes[idx].tolist()
+            nodes, coords, _ = gmsh.model.mesh.getNodes(1, tag, includeBoundary=True)
+            # t, _, nodes= gmsh.model.mesh.getElements(1, tag)
+            # idx= np.where(t==element_type)[0].item()
+            node_tags+= nodes.tolist()
         return node_tags
     
     def get_basis(self, element_type: int, integration_type:str="CompositeGauss7", function_space_type= "Lagrange"):

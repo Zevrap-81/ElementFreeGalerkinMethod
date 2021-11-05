@@ -125,6 +125,7 @@ class EFGM_Method:
             for i, quad in enumerate(element):
                 g_point = get_gauss(quad, self.params)
                 phi, dphidx, dphidy = shape(g_point, self.params)
+                assert pytest.approx(sum(phi), 100*np.finfo(np.float64).eps) == 1
 
                 lsf = self.params.quadrature.lagrange_shape_func[i]
                 Nmat = np.zeros((2, len(lsf)*2))
@@ -137,7 +138,7 @@ class EFGM_Method:
                 id_x= self.get_indices_voigt(g_point)
 
                 id_y= np.arange(0, len(lsf)*2)
-                offset= e_id 
+                offset= e_id*2
                 id_y+= offset
 
                 id_x, id_y = np.meshgrid(id_x, id_y)
