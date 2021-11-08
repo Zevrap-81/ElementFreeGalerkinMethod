@@ -85,16 +85,16 @@ class EFGM_Method:
 
         #Displacement Boundary
         disp_tags= self.geom.get_entities_for_physicalgroup_name("Displacement") # entity tags (lines) on the displacement boundary
-        disp_node_tags = self.geom.get_nodes(element_type, disp_tags)
+        disp_node_tags, _ = self.geom.get_nodes(element_type, disp_tags)
         self.params.quadrature.gauss_displacement_boundary = self.geom.get_quadrature(element_type, integration_type, disp_tags, geometry_type)
         self.params.descrete_equations.G = np.zeros((num_nodes*num_dims, len(disp_node_tags)*num_dims))
-        self.params.descrete_equations.q= np.zeros((len(disp_node_tags)*num_dims, 1))
+        self.params.descrete_equations.q= np.zeros(len(disp_node_tags)*num_dims)
 
         #Traction Boundary
         traction_tags= self.geom.get_entities_for_physicalgroup_name("Traction") #entity tags (lines) on the traction boundary
-        traction_node_tags = self.geom.get_nodes(element_type, traction_tags)
+        traction_node_tags, _ = self.geom.get_nodes(element_type, traction_tags)
         self.params.quadrature.gauss_traction_boundary = self.geom.get_quadrature(element_type, integration_type, traction_tags, geometry_type)
-        self.params.descrete_equations.f = np.zeros((num_nodes*num_dims, 1))
+        self.params.descrete_equations.f = np.zeros(num_nodes*num_dims)
 
 
     def set_LHS(self):
@@ -108,32 +108,28 @@ class EFGM_Method:
             assert pytest.approx(sum(phi), 100*np.finfo(np.float64).eps) == 1
             # assert pytest.approx(sum(phi), 10**(-3)) == 1
             
-            Bmat = np.zeros((3, 2*g_point.len))
-            Bmat[0, 0::2]= dphidx
-            Bmat[1, 1::2]= dphidy
-            Bmat[2, 0::2] = dphidy
-            Bmat[2, 1::2] = dphidx
-
+            Bmat = self.get_Bmat(g_point, dphidx, dphidy)
+            
             ids= self.get_indices_voigt(g_point)
             id_x, id_y = np.meshgrid(ids, ids)
 
-            K = g_point.weight * np.matmul(Bmat.T, np.matmul(self.params.material.Dmat,Bmat))
-            self.params.descrete_equations.K_stiff[id_x, id_y] += g_point.jac_det * K.T
+            K = g_point.jac_det* g_point.weight * np.dot(Bmat.T, np.dot(self.params.material.Dmat,Bmat))
+           
+            self.params.descrete_equations.K_stiff[id_x, id_y] +=  K
 
         #Get the G matrix (lagrange multiplier approach)
         for e_id, element in enumerate(self.params.quadrature.gauss_displacement_boundary):
             for i, quad in enumerate(element):
                 g_point = get_gauss(quad, self.params)
                 phi, dphidx, dphidy = shape(g_point, self.params)
-                assert pytest.approx(sum(phi), 100*np.finfo(np.float64).eps) == 1
+                assert pytest.approx(sum(phi), 10*np.finfo(np.float64).eps) == 1
+                assert pytest.approx(sum(phi*self.params.mesh.mesh.points[g_point.support_nodes, 0]), 10**(-4)) == g_point.coord[0]
 
                 lsf = self.params.quadrature.lagrange_shape_func[i]
-                Nmat = np.zeros((2, len(lsf)*2))
-                Nmat[0, 0::2] = lsf 
-                Nmat[1, 1::2] = lsf
+                Nmat = self.get_Nmat(lsf)
 
                 G= Nmat[None, :,:]*phi[:, None, None]
-                G= - g_point.weight*G.reshape(-1, len(lsf)*2)
+                G= - g_point.jac_det* g_point.weight*G.reshape(-1, len(lsf)*2)
                 
                 id_x= self.get_indices_voigt(g_point)
 
@@ -143,7 +139,7 @@ class EFGM_Method:
 
                 id_x, id_y = np.meshgrid(id_x, id_y)
                 
-                self.params.descrete_equations.G[id_x,id_y]+= g_point.jac_det* G.T
+                self.params.descrete_equations.G[id_x,id_y]+=  G.T
         # print(self.params.descrete_equations.G)
 
    
@@ -153,34 +149,69 @@ class EFGM_Method:
         for quad in self.params.quadrature.gauss_traction_boundary.reshape(-1, *size[2:]):
             g_point = get_gauss(quad, self.params)
             phi, dphidx, dphidy = shape(g_point, self.params)
-
+            assert pytest.approx(sum(phi), 10*np.finfo(np.float64).eps) == 1
+            
             t = self.params.geometry.model.traction_force(g_point.coord)
-            f= t[None, :, :] * phi[:, None, None]
-            f= g_point.weight * f.reshape(-1, 1)
+            f= t[None, :] * phi[:, None]
+            f= g_point.weight * f.flatten()
             
             id_x= self.get_indices_voigt(g_point)
 
-            self.params.descrete_equations.f[id_x] = g_point.jac_det * f #no meshgrid so no transpose
+            self.params.descrete_equations.f[id_x]+= g_point.jac_det * f #no meshgrid so no transpose
         
         for e_id, element in enumerate(self.params.quadrature.gauss_displacement_boundary):
             for i, quad in enumerate(element):
                 g_point = get_gauss(quad, self.params)
                 phi, dphidx, dphidy = shape(g_point, self.params)
+                assert pytest.approx(sum(phi), 10*np.finfo(np.float64).eps) == 1
 
                 u_bar = self.params.geometry.model.essential_boundary(g_point.coord, self.params.material)
                 lsf = self.params.quadrature.lagrange_shape_func[i]
-                Nmat = np.zeros((2, len(lsf)*2))
-                Nmat[0, 0::2] = lsf 
-                Nmat[1, 1::2] = lsf
+                Nmat = self.get_Nmat(lsf)
 
                 q= Nmat.T.dot(u_bar)
-                q*= -g_point.weight* q
+                q*= -g_point.jac_det * g_point.weight* q
 
                 id= np.arange(0, len(lsf)*2)
-                offset= e_id 
+                offset= e_id*2
                 id+= offset
 
-                self.params.descrete_equations.q[id]= g_point.jac_det * q
+                self.params.descrete_equations.q[id]+= q
+
+    
+
+    def solve(self):
+        f= np.concatenate((self.params.descrete_equations.f, self.params.descrete_equations.q))
+        
+        size = self.params.descrete_equations.G.shape
+        a = np.hstack((self.params.descrete_equations.K_stiff, self.params.descrete_equations.G))
+        b= np.hstack((self.params.descrete_equations.G.T, np.zeros((size[1], size[1]))))
+        K = np.vstack((a,b))
+
+        d = np.linalg.solve(K,f)
+        u = d[0:self.params.mesh.num_nodes*self.params.mesh.num_dims]
+        self.params.post_processing.disp = u 
+
+    def get_displacement(self, coord):
+        num_dims= self.params.mesh.num_dims
+
+        g_point= get_gauss(coord, self.params)
+        phi, dphidx, dphidy = shape(g_point, self.params)
+        id_x = self.get_indices_voigt(g_point)
+
+        disp = np.empty(num_dims)
+        for i in range(num_dims):
+            disp[i]= np.sum(phi[:, None]*self.params.post_processing.disp[id_x][i::num_dims])
+        return disp
+
+    def get_stress(self, coord):
+        g_point= get_gauss(coord, self.params)
+        phi, dphidx, dphidy = shape(g_point, self.params)
+        Bmat = self.get_Bmat(g_point, dphidx, dphidy)
+        id_x= self.get_indices_voigt(g_point)
+        stress = np.matmul(self.params.material.Dmat, Bmat.dot(self.params.post_processing.disp[id_x]))
+        return stress
+        
 
     def get_indices_voigt(self, g_point):
         id= np.repeat(g_point.support_nodes, self.params.mesh.num_dims)
@@ -189,17 +220,52 @@ class EFGM_Method:
         id+= offset
         return id
 
-    def solve(self):
-        f= np.vstack((self.params.descrete_equations.f, self.params.descrete_equations.q))
-        
-        size = self.params.descrete_equations.G.shape
-        a = np.hstack((self.params.descrete_equations.K_stiff, self.params.descrete_equations.G))
-        b= np.hstack((self.params.descrete_equations.G.T, np.zeros((size[1], size[1]))))
+    @staticmethod
+    def get_Bmat(g_point, dphidx, dphidy):
+        Bmat = np.zeros((3, 2*g_point.len))
+        Bmat[0, 0::2]= dphidx
+        Bmat[1, 1::2]= dphidy
+        Bmat[2, 0::2] = dphidy
+        Bmat[2, 1::2] = dphidx     
+        return Bmat
+    
+    @staticmethod
+    def get_Nmat(lsf):
+        Nmat = np.zeros((2, len(lsf)*2))
+        Nmat[0, 0::2] = lsf 
+        Nmat[1, 1::2] = lsf
+        return Nmat
+    
+    def calculate_energy_norm(self):
+        size = self.params.quadrature.gauss_internal.shape
 
-        K = np.vstack((a,b))
-        u = np.linalg.solve(K,f)
+        inv_Dmat= np.linalg.inv(self.params.material.Dmat)
+        e_norm= 0.0
+        for quad in self.params.quadrature.gauss_internal.reshape(-1, *size[2:]):
+            g_point= get_gauss(quad, self.params)
+            sigma= self.get_stress(quad)
+            sigma_ex = self.params.geometry.model.get_stress_exact(quad[0:self.params.mesh.num_dims])
+            
+            error= sigma - sigma_ex
+            norm= np.dot(inv_Dmat, error)
+            norm= 0.5* g_point.jac_det* g_point.weight* np.inner(norm, error)
+         
+            e_norm+= norm
+        e_norm = np.sqrt(e_norm)
+        return e_norm
 
-        print(u)
+    def simulation_automatic(self):
+        self.initialize()
+        self.create_geometry()
+        self.create_mesh()
+        self.init_material_properties()
+        self.set_nodes_domain()
+        self.assemble_descrete_equations()
+        self.solve()
+        self.visualize()
+        if self.params.post_processing.calculate_energy_norm:
+            return self.calculate_energy_norm()
+
 
     def visualize(self):
         if self.geometry_params.visualise: self.geom.visualise()

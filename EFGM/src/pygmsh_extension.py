@@ -98,12 +98,22 @@ class MyGeometry(Geometry):
             tags = list(tags)
 
         node_tags= []
+        node_coords= []
         for tag in tags:    
             nodes, coords, _ = gmsh.model.mesh.getNodes(1, tag, includeBoundary=True)
+            nodes[[-1,-2]] = nodes[[-2,-1]]
+            nodes = np.roll(nodes, 1)
+            coords= coords.reshape(-1,3)
+            coords[[-1,-2]] = coords[[-2,-1]]
+            coords = np.roll(coords, 1, axis=0)
             # t, _, nodes= gmsh.model.mesh.getElements(1, tag)
             # idx= np.where(t==element_type)[0].item()
             node_tags+= nodes.tolist()
-        return node_tags
+            node_coords+= coords.tolist()
+
+        node_coords = np.array(node_coords).reshape(-1,3)
+
+        return node_tags, node_coords
     
     def get_basis(self, element_type: int, integration_type:str="CompositeGauss7", function_space_type= "Lagrange"):
         uvw, weights= gmsh.model.mesh.getIntegrationPoints(element_type, integration_type)

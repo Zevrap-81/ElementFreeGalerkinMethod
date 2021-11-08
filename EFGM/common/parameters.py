@@ -65,6 +65,7 @@ class DomainParameters(ParametersBase):
     def __init__(self):
         self.dmax = 0
         self.dm = None
+        self.weight_function= 'exp' #'exp' and 'cubic' are supported
 
 @dataclass
 class DescreteEquations(ParametersBase):
@@ -73,6 +74,15 @@ class DescreteEquations(ParametersBase):
     f : np.ndarray = None
     q : np.ndarray = None
 
+class PostProcessingParameters(ParametersBase):
+    def __init__(self):
+        self.disp = None
+        self.stress = None
+        self.strain = None
+        self.energy_norm = None
+        self.calculate_stress = False
+        self.calculate_strain = False
+        self.calculate_energy_norm = False
 
 class Parameters:
     def __init__(self):
@@ -82,5 +92,5 @@ class Parameters:
         self.quadrature= ParametersQuadrature()
         self.domain = DomainParameters()
         self.descrete_equations= DescreteEquations()
-
+        self.post_processing = PostProcessingParameters()
         

@@ -26,3 +26,34 @@ def expwgt(g_point: GaussPoint, params: Parameters):
         dwdx[i] = wy*diwx
         dwdy[i] = wx*diwy
     return (w, dwdx, dwdy)
+
+def cubwgt(g_point:GaussPoint, params:Parameters):
+    dm = params.domain.dm
+    #print(g_point.len)
+    w=np.empty(g_point.len)
+    dwdx=np.empty(g_point.len)
+    dwdy=np.empty(g_point.len)
+
+    for i in range(g_point.len):
+        drdx=np.sign(g_point.dists[i,0])/dm[g_point.support_nodes[i],0]
+        drdy=np.sign(g_point.dists[i,1])/dm[g_point.support_nodes[i],1]
+        rx=abs(g_point.dists[i,0])/dm[g_point.support_nodes[i],0]
+        ry=abs(g_point.dists[i,1])/dm[g_point.support_nodes[i],1]
+        #print(drdx)
+        if rx>0.5:
+            wx=(4/3)-(4*rx)+(4*rx*rx)-(4/3)*(rx**3)
+            dwx=(-4+(8*rx)-(4*rx**2))*drdx
+        elif rx<=0.5:
+            wx=(2/3)-(4*rx*rx)+(4*rx**3)
+            dwx=((-8*rx)+(12*rx**2))*drdx
+        if ry>0.5:
+            wy=(4/3)-(4*ry)+(4*ry*ry)-(4/3)*(ry**3)
+            dwy=(-4+(8*ry)-(4*ry**2))*drdy
+        elif ry<=0.5:
+            wy=(2/3)-(4*ry*ry)+(4*ry**3)
+            dwy=((-8*ry)+(12*ry**2))*drdy
+        #print(i)
+        w[i]=wx*wy
+        dwdx[i]=wy*dwx
+        dwdy[i]=wx*dwy
+    return (w,dwdx,dwdy)

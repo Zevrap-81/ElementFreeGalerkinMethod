@@ -6,7 +6,7 @@ from scipy.linalg.decomp_lu import lu_factor, lu_solve
 from EFGM.common.parameters import Parameters
 from EFGM.src.gauss import GaussPoint
 # from .cubwgt import *
-from .expwgt import *
+from .weight_func import cubwgt, expwgt
 import pytest
 import matplotlib.pyplot as plt
 
@@ -18,12 +18,12 @@ def shape(g_point:GaussPoint, params: Parameters):
     nv = params.mesh.mesh.points[g_point.support_nodes, 0:params.mesh.num_dims]
     lin_base = np.hstack((ones, nv))  # polynomial basis(1,x,y)
     
-    w, dwdx, dwdy = expwgt(g_point, params)
-
-    # Uncomment to use cubic weight function
-    # dif=g_ppg = np.insert(g_point*ones-nv
-    # t=dm[0:2,v]/params.domain.dmax
-    # w,dwdx,dwdy=cubwgt(dif,t,v,params.domain.dmax,dm)
+    if params.domain.weight_function=='exp':
+        w, dwdx, dwdy = expwgt(g_point, params)
+    elif params.domain.weight_function=='cubic':
+        w,dwdx,dwdy= cubwgt(g_point, params)
+    else:
+        raise Exception("Not a valid weightfunction type")
 
     pp = np.einsum('xi, xo->xio', lin_base, lin_base) 
     A = (pp * w[:, None, None]).sum(axis=0)

@@ -17,9 +17,15 @@ class GaussPoint:
         return len(self.support_nodes)
         
 def get_gauss(quad, params: Parameters):
-    point= quad[0:params.mesh.num_dims] 
-    weight= quad[-2]
-    jac_det= quad[-1]
+    if len(quad)==params.mesh.num_dims:
+        point= quad
+        weight, jac_det= 0.0, 0.0 
+
+    else:
+        point= quad[0:params.mesh.num_dims]
+        weight= quad[-2]
+        jac_det= quad[-1]
+
     v, di = support(point, params)
     return GaussPoint(point, weight, jac_det, v, di)
     

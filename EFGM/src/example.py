@@ -1,10 +1,11 @@
 import numpy as np
+from EFGM.src.post_processing import PostProcessing_RectangularBeam
 
 from efgm import EFGM_Method
 from geometry import RectangularBeam    
 from EFGM.common.parameters import Parameters      
 
-beam = RectangularBeam(x0=[-1,-1,0], a=48, b= 12, n_div_len=23, n_div_width=11)
+beam = RectangularBeam(a=48, b= 12, n_div_len=24, n_div_width=12)
 
 #initialise parameters
 params= Parameters()
@@ -15,8 +16,6 @@ params.geometry.model= beam
 
 params.geometry.model.P= 1000 #traction force
 
-params.save_geometry= True
-params.save_geometry_path= "/Users/parvezmohammed/Downloads/Downloads/Summer21_22/ResearchProject/ElementFreeGalerkinMethod/EFGM/geometries"
 params.geometry.visualise= False
 
 #parameters related to material
@@ -28,7 +27,10 @@ params.material.type = 'plane_stress'
 params.quadrature.integration_type = "CompositeGauss7" 
 
 #parameters related to domain
-params.domain.dmax = 4
+params.domain.dmax = 2
+
+#parameters related to postprocessing
+params.post_processing.calculate_stress= True
 
 
 solver = EFGM_Method(params)
@@ -40,3 +42,10 @@ solver.set_nodes_domain()
 solver.assemble_descrete_equations()
 solver.solve()
 solver.visualize()
+
+#or do 
+# solver.simulation_automatic()
+
+post = PostProcessing_RectangularBeam(params, solver)
+
+post.plot_stresses("nominal") #"Midsection"
