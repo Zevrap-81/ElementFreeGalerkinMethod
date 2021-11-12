@@ -105,14 +105,12 @@ class EFGM_Method:
         for quad in self.params.quadrature.gauss_internal.reshape(-1, *size[2:]):
             g_point = get_gauss(quad, self.params)
             phi, dphidx, dphidy= shape(g_point, self.params)
-            assert pytest.approx(sum(phi), 100*np.finfo(np.float64).eps) == 1
-            # assert pytest.approx(sum(phi), 10**(-3)) == 1
+            assert pytest.approx(sum(phi), 1*np.finfo(np.float64).eps) == 1
             
             Bmat = self.get_Bmat(g_point, dphidx, dphidy)
             
             ids= self.get_indices_voigt(g_point)
             id_x, id_y = np.meshgrid(ids, ids)
-
             K = g_point.jac_det* g_point.weight * np.dot(Bmat.T, np.dot(self.params.material.Dmat,Bmat))
            
             self.params.descrete_equations.K_stiff[id_x, id_y] +=  K
@@ -122,7 +120,7 @@ class EFGM_Method:
             for i, quad in enumerate(element):
                 g_point = get_gauss(quad, self.params)
                 phi, dphidx, dphidy = shape(g_point, self.params)
-                assert pytest.approx(sum(phi), 10*np.finfo(np.float64).eps) == 1
+                assert pytest.approx(sum(phi), 1*np.finfo(np.float64).eps) == 1
                 assert pytest.approx(sum(phi*self.params.mesh.mesh.points[g_point.support_nodes, 0]), 10**(-4)) == g_point.coord[0]
 
                 lsf = self.params.quadrature.lagrange_shape_func[i]
@@ -177,8 +175,6 @@ class EFGM_Method:
                 id+= offset
 
                 self.params.descrete_equations.q[id]+= q
-
-    
 
     def solve(self):
         f= np.concatenate((self.params.descrete_equations.f, self.params.descrete_equations.q))
@@ -235,7 +231,16 @@ class EFGM_Method:
         Nmat[0, 0::2] = lsf 
         Nmat[1, 1::2] = lsf
         return Nmat
-    
+
+    def calculate_disp_exact(self):
+        mesh = self.params.mesh.mesh
+        model = self.params.geometry.model
+
+        disp_ex= np.empty((len(mesh.points),2))
+        for i, point in enumerate(mesh.points):
+            disp_ex[i]= model.get_disp_exact(point, self.params.material)
+        return disp_ex.flatten()
+
     def calculate_energy_norm(self):
         size = self.params.quadrature.gauss_internal.shape
 

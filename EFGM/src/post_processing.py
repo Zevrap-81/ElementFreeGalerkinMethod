@@ -14,11 +14,17 @@ class PostProcessing_RectangularBeam(PostProcessing):
     def __init__(self, params:Parameters,  solver:EFGM_Method):
         self.params= params
         self.solver = solver
+    
+    def disp_error(self):
+        model = self.params.geometry.model
+
+        disp = self.params.post_processing.disp
+        disp_exact = model.get_disp_exact()
 
     def plot_stresses(self, stress_type= "nominal"):
         #fix me
         node2 = np.linspace(-self.params.geometry.model.width/2, self.params.geometry.model.width/2, 10)     
-        node1 = np.ones_like(node2)*self.params.geometry.model.length/2
+        node1 = np.ones_like(node2)*self.params.geometry.model.length*0
         
         nodes = np.vstack((node1, node2)).T
 
@@ -27,9 +33,9 @@ class PostProcessing_RectangularBeam(PostProcessing):
         model = self.params.geometry.model
         
         for i, node in enumerate(nodes):
+            print(node)
             stresses[i]= self.solver.get_stress(node)
             stresses_ex[i]= model.get_stress_exact(node)
-        print(stresses)
 
         if stress_type=='nominal':
             i= 0
@@ -37,7 +43,7 @@ class PostProcessing_RectangularBeam(PostProcessing):
             i= 2
 
         fig, ax = plt.subplots()
-        ax.plot(nodes[:,1], stresses[:,i], color='b', label='Numerical')
+        ax.plot(nodes[:,1], -stresses[:,i], color='b', label='Numerical')
         ax.scatter(nodes[:,1], stresses_ex[:,i], color='r', marker='o', label='Analytical')
         ax.legend()
         plt.xlabel("nodes along width")

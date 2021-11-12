@@ -95,12 +95,12 @@ class RectangularBeam(GeometricModel):
         u = np.empty(2)
         temp = (6*self.length-3*x)*x
         temp+= (2+material_params.poi)*(y**2 -(self.width/2)**2)
-        u[0]= -c*y*temp
+        u[0]= c*y*temp
         
         temp = 3*material_params.poi*(self.length-x)*y**2
         temp+= (4 + 5*material_params.poi)*x*(self.width/2)**2
         temp+= (3*self.length - x)*x**2
-        u[1]= c*temp  
+        u[1]= -c*temp  
 
         return u   
 

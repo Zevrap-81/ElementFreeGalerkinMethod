@@ -29,31 +29,33 @@ def expwgt(g_point: GaussPoint, params: Parameters):
 
 def cubwgt(g_point:GaussPoint, params:Parameters):
     dm = params.domain.dm
-    #print(g_point.len)
-    w=np.empty(g_point.len)
-    dwdx=np.empty(g_point.len)
-    dwdy=np.empty(g_point.len)
+    
+    drdx=np.sign(g_point.dists[:,0])
+    drdy=np.sign(g_point.dists[:,1])
+    rx=np.abs(g_point.dists[:,0])/dm[g_point.support_nodes,0]
+    ry=np.abs(g_point.dists[:,1])/dm[g_point.support_nodes,1]
+    
+    wx = np.empty(g_point.len)
+    wy = np.empty(g_point.len)
 
-    for i in range(g_point.len):
-        drdx=np.sign(g_point.dists[i,0])/dm[g_point.support_nodes[i],0]
-        drdy=np.sign(g_point.dists[i,1])/dm[g_point.support_nodes[i],1]
-        rx=abs(g_point.dists[i,0])/dm[g_point.support_nodes[i],0]
-        ry=abs(g_point.dists[i,1])/dm[g_point.support_nodes[i],1]
-        #print(drdx)
-        if rx>0.5:
-            wx=(4/3)-(4*rx)+(4*rx*rx)-(4/3)*(rx**3)
-            dwx=(-4+(8*rx)-(4*rx**2))*drdx
-        elif rx<=0.5:
-            wx=(2/3)-(4*rx*rx)+(4*rx**3)
-            dwx=((-8*rx)+(12*rx**2))*drdx
-        if ry>0.5:
-            wy=(4/3)-(4*ry)+(4*ry*ry)-(4/3)*(ry**3)
-            dwy=(-4+(8*ry)-(4*ry**2))*drdy
-        elif ry<=0.5:
-            wy=(2/3)-(4*ry*ry)+(4*ry**3)
-            dwy=((-8*ry)+(12*ry**2))*drdy
-        #print(i)
-        w[i]=wx*wy
-        dwdx[i]=wy*dwx
-        dwdy[i]=wx*dwy
-    return (w,dwdx,dwdy)
+    dwdx = np.empty(g_point.len)
+    dwdy = np.empty(g_point.len)
+    #print(drdx)
+    id_x = rx>0.5 #all indices where rx >0.5
+    wx[id_x]= 4/3 -4*rx[id_x] +4*rx[id_x]**2 -4/3*rx[id_x]**3
+    dwdx[id_x]= (-4 +8*rx[id_x] -4*rx[id_x]**2)*drdx[id_x]
+    # elif rx<=0.5:
+    wx[~id_x]=2/3 -4*rx[~id_x]**2+ 4*rx[~id_x]**3
+    dwdx[~id_x]=(-8*rx[~id_x] +12*rx[~id_x]**2)*drdx[~id_x]
+
+    id_y = ry>0.5
+    wy[id_y]= 4/3- 4*ry[id_y] +4*ry[id_y]**2 -4/3*ry[id_y]**3
+    dwdy[id_y]=(-4 +8*ry[id_y] -4*ry[id_y]**2)*drdy[id_y]
+    # elif ry<=0.5:
+    wy[~id_y]=2/3- 4*ry[~id_y]**2+ 4*ry[~id_y]**3
+    dwdy[~id_y]=(-8*ry[~id_y] +12*ry[~id_y]**2)*drdy[~id_y]
+
+    w=wx*wy
+    dwdx*=wy
+    dwdy*=wx
+    return (w, dwdx, dwdy)

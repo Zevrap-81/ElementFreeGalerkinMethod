@@ -21,7 +21,7 @@ params.material.type = 'plane_stress'
 params.quadrature.integration_type = "CompositeGauss7" 
 
 #parameters related to domain
-params.domain.dmax = 4
+params.domain.dmax = 2
 params.domain.weight_function = 'cubic'
 #parameters related to postprocessing
 params.post_processing.calculate_energy_norm= True
@@ -57,6 +57,6 @@ fig, ax = plt.subplots()
 ax.plot(np.log10(h), np.log10(energy_norm), color='b', label=f'Slope= {slope:.2f}')
 ax.legend()
 plt.xlabel("$Log_{10}(h)$")
-plt.ylabel("$Log_{10}(energy_norm)")
+plt.ylabel("$Log_{10}(energy_norm)$")
 plt.title("shear stress along cross-section")
 plt.show()

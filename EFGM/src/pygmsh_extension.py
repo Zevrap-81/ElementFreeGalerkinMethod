@@ -68,7 +68,6 @@ class MyGeometry(Geometry):
 
         points= []
         dets= []
-        num_elems= 0
         for tag in tags:
             jac, det, point = gmsh.model.mesh.getJacobians(element_type, uvw, tag)
             points+=point.tolist()

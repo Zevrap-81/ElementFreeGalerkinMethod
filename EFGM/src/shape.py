@@ -6,7 +6,7 @@ from scipy.linalg.decomp_lu import lu_factor, lu_solve
 from EFGM.common.parameters import Parameters
 from EFGM.src.gauss import GaussPoint
 # from .cubwgt import *
-from .weight_func import cubwgt, expwgt
+from .weight_func import expwgt, cubwgt
 import pytest
 import matplotlib.pyplot as plt
 
