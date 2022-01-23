@@ -4,6 +4,7 @@ from EFGM.src.post_processing import PostProcessing_RectangularBeam
 from efgm import EFGM_Method
 from geometry import RectangularBeam    
 from EFGM.common.parameters import Parameters      
+import timeit
 
 beam = RectangularBeam(a=48, b= 12, n_div_len=48, n_div_width=24)
 
@@ -24,15 +25,15 @@ params.material.poi = 0.3
 params.material.type = 'plane_stress'
 
 #paramters related to quadrature
-params.quadrature.integration_type = "CompositeGauss2" 
+params.quadrature.integration_type = "CompositeGauss7" 
 
 #parameters related to domain
-params.domain.dmax = 2
-params.domain.weight_function= 'cubic'
+params.domain.dmax = 2.5
+params.domain.weight_function= 'exp'
 #parameters related to postprocessing
 params.post_processing.calculate_energy_norm= True
 
-
+starttime= timeit.default_timer()
 solver = EFGM_Method(params)
 # solver.initialize()
 # solver.create_geometry()
@@ -45,7 +46,8 @@ solver = EFGM_Method(params)
 
 #or do 
 solver.simulation_automatic()
-
+print(timeit.default_timer()-starttime)
 post = PostProcessing_RectangularBeam(params, solver)
 
-post.plot_stresses("shear") #"Midsection"
+# post.plot_stresses("nominal") #"Midsection"
+post.plot_disps()

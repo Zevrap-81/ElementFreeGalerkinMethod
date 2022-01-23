@@ -168,7 +168,7 @@ class EFGM_Method:
                 Nmat = self.get_Nmat(lsf)
 
                 q= Nmat.T.dot(u_bar)
-                q*= -g_point.jac_det * g_point.weight* q
+                q= -g_point.jac_det * g_point.weight* q
 
                 id= np.arange(0, len(lsf)*2)
                 offset= e_id*2
@@ -197,7 +197,7 @@ class EFGM_Method:
 
         disp = np.empty(num_dims)
         for i in range(num_dims):
-            disp[i]= np.sum(phi[:, None]*self.params.post_processing.disp[id_x][i::num_dims])
+            disp[i]= phi[:].dot(self.params.post_processing.disp[id_x][i::num_dims])
         return disp
 
     def get_stress(self, coord):
